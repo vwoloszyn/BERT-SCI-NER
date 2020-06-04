@@ -229,28 +229,28 @@ def minimal_test_spans_to_bio_tagseq(text, spans):
 def split_sentences_tags_simp(docs,labels):
     sents=[]
     labs=[]
-    pos_tag=[]
+    pos=[]
     for i in range(len(docs)):
         doc=nlp(docs[i])
-        tokens = [token[2] for sent in doc.sents for token in regex_tokenizer(str(sent)) ]
-
-        pos = [token.pos_ for token in nlp(" ".join(tokens)) ]
-        #print ('*')
-        #print (len(tokens))
-        #print (len(labels[i]))
-        #print ('*')
-        #print (tokens)
-        for j in range(0,len(tokens),MAX_LEN):
-            start= j
-            end= j+MAX_LEN
-            labs.append(labels[i][start:end])
-            pos_tag.append(pos[start:end])
-            sents.append(" ".join(tokens[start:end]))
-            #print ("#")
-            #print(" ".join(tokens[start:end]))
-            #print(labels[i][start:end])
-            #print ("#")
-    return sents,labs,pos_tag
+        for s in doc.sents:
+            s_label=[]
+            s_pos=[]
+            for t in s:
+                label="O"
+                for l in labels[i]:
+                    if t.idx >= l[0] and t.idx < l[1]:
+                        #print ("label found:" + l[2])
+                        if len(s_label)>0:
+                            if s_label[-1]=="B-"+l[2]:
+                                label="I-"+l[2]
+                            else:
+                                label="B-"+l[2]
+                s_label.append(label)
+                s_pos.append(t.pos_)
+        labs.append(s_label)
+        pos.append(s_pos)
+        sents.append([t for t in s])
+    return sents,labs,pos
 
 
 def write_conll(pdf,filename):
@@ -263,32 +263,32 @@ def write_conll(pdf,filename):
     f.writelines("\n")
 
     for i in range(len(sentences)):
-        tokens = regex_tokenizer(str(sentences[i]))
-        for j in range(len(tokens)):
-            f.writelines(str(tokens[j][2])+ " . " +  str(tags[i][j])+ " " + str(span_labels[i][j]))
+        for j in range(len(sentences[i])):
+            f.writelines(str(sentences[i][j])+ " . " +  str(tags[i][j])+ " " + str(span_labels[i][j]))
             f.writelines("\n")
         f.writelines("\n")
 
 
+#df = pd.read_json (r'file_test.json1', lines=True)
 df = pd.read_json (r'original_data.json', lines=True)
 sentences = []
 span_labels = []
+actual_labels=[]
 
 for index, row in df.iterrows():
     #print (row.keys())
     actual_text = row['text']
-    actual_labels = row['labels']
+    labels = row['labels']
     #print (actual_text)
     #print (actual_labels)
-
-    pair_of_text_label = [actual_text,minimal_test_spans_to_bio_tagseq(actual_text,actual_labels)]
-
+    pair_of_text_label = [actual_text,minimal_test_spans_to_bio_tagseq(actual_text,labels)]
     sentences.append(pair_of_text_label[0])
     span_labels.append(pair_of_text_label[1])
+    actual_labels.append(labels)
 
 
 MAX_LEN = 64
-sentences,span_labels,tags=split_sentences_tags_simp(sentences,span_labels)
+sentences,span_labels,tags=split_sentences_tags_simp(sentences,actual_labels)
 data=pd.DataFrame({'sentence': sentences, 'labels':span_labels, 'pos':tags})
 train_, test_ = train_test_split(data,test_size=0.3)
 
