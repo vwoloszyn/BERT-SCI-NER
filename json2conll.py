@@ -223,21 +223,7 @@ def minimal_test_spans_to_bio_tagseq(text, spans):
 
 
 
-df = pd.read_json (r'file_test.json1', lines=True)
-sentences = []
-span_labels = []
 
-for index, row in df.iterrows():
-    #print (row.keys())
-    actual_text = row['text']
-    actual_labels = row['labels']
-    #print (actual_text)
-    #print (actual_labels)
-
-    pair_of_text_label = [actual_text,minimal_test_spans_to_bio_tagseq(actual_text,actual_labels)]
-
-    sentences.append(pair_of_text_label[0])
-    span_labels.append(pair_of_text_label[1])
 
 
 def split_sentences_tags_simp(docs,labels):
@@ -259,7 +245,7 @@ def split_sentences_tags_simp(docs,labels):
             end= j+MAX_LEN
             labs.append(labels[i][start:end])
             pos_tag.append(pos[start:end])
-            sents.append(" ".join(tokens[start:end]).lower())
+            sents.append(" ".join(tokens[start:end]))
             #print ("#")
             #print(" ".join(tokens[start:end]))
             #print(labels[i][start:end])
@@ -284,14 +270,31 @@ def write_conll(pdf,filename):
         f.writelines("\n")
 
 
+df = pd.read_json (r'original_data.json', lines=True)
+sentences = []
+span_labels = []
+
+for index, row in df.iterrows():
+    #print (row.keys())
+    actual_text = row['text']
+    actual_labels = row['labels']
+    #print (actual_text)
+    #print (actual_labels)
+
+    pair_of_text_label = [actual_text,minimal_test_spans_to_bio_tagseq(actual_text,actual_labels)]
+
+    sentences.append(pair_of_text_label[0])
+    span_labels.append(pair_of_text_label[1])
+
+
 MAX_LEN = 64
 sentences,span_labels,tags=split_sentences_tags_simp(sentences,span_labels)
 data=pd.DataFrame({'sentence': sentences, 'labels':span_labels, 'pos':tags})
 train_, test_ = train_test_split(data,test_size=0.3)
 
-write_conll(train_,"./data/train.txt")
-write_conll(test_,"./data/test.txt")
-write_conll(test_,"./data/valid.txt")
+write_conll(train_,"./data_scierc/train.txt")
+write_conll(test_,"./data_scierc/test.txt")
+write_conll(test_,"./data_scierc/valid.txt")
 
 
 
